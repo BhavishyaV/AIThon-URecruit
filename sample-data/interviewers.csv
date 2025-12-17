@@ -1,0 +1,8 @@
+Interviewer Email,Interviewer Name,Rounds Eligible,Available Slot Start,Available Slot End,Level,Job Family,Max Interviews
+john.doe@company.com,John Doe,"BPS, CODING1, CODING2",09:00,13:00,4,Backend,4
+jane.smith@company.com,Jane Smith,"CODING2, BAR_RAISER",11:00,17:00,5A,Backend,5
+emma.jones@company.com,Emma Jones,"CODING2, BAR_RAISER",11:00,17:00,5A,Frontend,5
+bob.wilson@company.com,Bob Wilson,"BPS, CODING1",10:00,16:00,3,Backend,3
+alice.brown@company.com,Alice Brown,"BPS, CODING1, CODING2",09:30,14:00,4,Frontend,4
+charlie.davis@company.com,Charlie Davis,"BPS, CODING1, CODING2",11:00,17:00,5A,Backend,3
+

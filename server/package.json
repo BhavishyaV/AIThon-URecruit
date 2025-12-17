@@ -14,10 +14,13 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@types/uuid": "^11.0.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
-    "mongoose": "^9.0.1"
+    "mongoose": "^9.0.1",
+    "uuid": "^13.0.0",
+    "lodash": "^4.17.21"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",

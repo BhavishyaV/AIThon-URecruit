@@ -1,17 +1,26 @@
 {
   "name": "hiring-drive",
   "version": "1.0.0",
-  "description": "",
+  "description": "Hiring Drive Management System",
   "main": "index.js",
   "scripts": {
+    "install-all": "npm install && cd server && npm install && cd ../client && npm install",
     "server": "cd server && npm run dev",
     "client": "cd client && npm start",
-    "dev": "concurrently \"npm run server\" \"npm run client\""
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "build": "cd client && npm run build",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
+  "keywords": [
+    "hiring",
+    "interviews",
+    "scheduling",
+    "dashboard"
+  ],
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "@types/lodash": "^4.17.21",
+    "concurrently": "^8.2.0"
   }
 }

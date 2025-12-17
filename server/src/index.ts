@@ -1,7 +1,8 @@
-import dotenv from 'dotenv';
-import express, { Request, Response } from 'express';
-import mongoose from 'mongoose';
+import express from 'express';
 import cors from 'cors';
+import dotenv from 'dotenv';
+import { connectDB } from './config/database';
+import hiringDriveRoutes from './routes/hiringDriveRoutes';
 
 dotenv.config();
 
@@ -13,22 +14,16 @@ app.use(cors());
 app.use(express.json());
 
 // Connect to MongoDB
-const mongoUri = process.env.MONGO_URI;
-if (mongoUri) {
-  mongoose.connect(mongoUri)
-    .then(() => console.log('MongoDB connected successfully'))
-    .catch(err => console.error('MongoDB connection error:', err));
-} else {
-  console.warn('MONGO_URI not provided in environment variables');
-}
+connectDB();
 
-// Simple Route
-app.get('/api/test', (req: Request, res: Response) => {
-  res.json({ message: 'Hello from Node.js Server!' });
+// Routes
+app.use('/api', hiringDriveRoutes);
+
+// Health check
+app.get('/health', (req, res) => {
+  res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// Start Server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
-
