@@ -12,14 +12,17 @@ router.get('/hiring-drives', HiringDriveController.getAllHiringDrives);
 // Get a specific hiring drive
 router.get('/hiring-drives/:driveId', HiringDriveController.getHiringDrive);
 
-// Update an event (interviewer feedback)
-router.patch('/hiring-drives/:driveId/events', HiringDriveController.updateEvent);
+// // Update an event (interviewer feedback)
+// router.patch('/hiring-drives/:driveId/events', HiringDriveController.updateEvent);
 
-// Trigger scheduling manually
-router.post('/hiring-drives/:driveId/schedule', HiringDriveController.triggerScheduling);
+// // Trigger scheduling manually
+// router.post('/hiring-drives/:driveId/schedule', HiringDriveController.triggerScheduling);
 
 // Get dashboard statistics
 router.get('/hiring-drives/:driveId/stats', HiringDriveController.getDashboardStats);
+
+// Receive notification response
+router.post('/notification-response', HiringDriveController.receiveNotificationResponse);
 
 export default router;
 

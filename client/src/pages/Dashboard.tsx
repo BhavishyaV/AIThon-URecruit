@@ -18,6 +18,7 @@ const Dashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('timeline');
   const [candidateSearch, setCandidateSearch] = useState('');
   const [interviewerSearch, setInterviewerSearch] = useState('');
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   const fetchData = useCallback(async () => {
     if (!driveId) return;
@@ -54,6 +55,15 @@ const Dashboard: React.FC = () => {
     return () => clearInterval(interval);
   }, [autoRefresh, fetchData]);
 
+  // Update current time every second
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   const handleManualRefresh = () => {
     setLoading(true);
     fetchData();
@@ -80,77 +90,91 @@ const Dashboard: React.FC = () => {
     return '#ed8936'; // Orange for scheduled
   };
 
-  const getEventWidth = (duration: number, startTime: string, endTime: string): number => {
-    const [startHour, startMin] = startTime.split(':').map(Number);
-    const [endHour, endMin] = endTime.split(':').map(Number);
-    const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+  const getEventWidth = (duration: number, driveStartTime: string, driveEndTime: string): number => {
+    const startDate = new Date(driveStartTime);
+    const endDate = new Date(driveEndTime);
+    const totalMinutes = (endDate.getTime() - startDate.getTime()) / (1000 * 60);
     return (duration / totalMinutes) * 100;
   };
 
   const getInterviewerSlotPosition = (slotStart: string, driveStartTime: string, driveEndTime: string): { left: number; width: number } => {
-    const [driveStartHour, driveStartMin] = driveStartTime.split(':').map(Number);
-    const [driveEndHour, driveEndMin] = driveEndTime.split(':').map(Number);
-    const [slotStartHour, slotStartMin] = slotStart.split(':').map(Number);
+    const driveStartDate = new Date(driveStartTime);
+    const driveEndDate = new Date(driveEndTime);
+    const slotStartDate = new Date(slotStart);
     
-    const driveStartTotal = driveStartHour * 60 + driveStartMin;
-    const driveEndTotal = driveEndHour * 60 + driveEndMin;
-    const slotStartTotal = slotStartHour * 60 + slotStartMin;
-    
-    const totalMinutes = driveEndTotal - driveStartTotal;
-    const left = ((slotStartTotal - driveStartTotal) / totalMinutes) * 100;
+    const totalMinutes = (driveEndDate.getTime() - driveStartDate.getTime()) / (1000 * 60);
+    const offsetMinutes = (slotStartDate.getTime() - driveStartDate.getTime()) / (1000 * 60);
+    const left = (offsetMinutes / totalMinutes) * 100;
     
     return { left: Math.max(0, left), width: 0 };
   };
 
   const getInterviewerSlotWidth = (slotStart: string, slotEnd: string, driveStartTime: string, driveEndTime: string): number => {
-    const [driveStartHour, driveStartMin] = driveStartTime.split(':').map(Number);
-    const [driveEndHour, driveEndMin] = driveEndTime.split(':').map(Number);
-    const [slotStartHour, slotStartMin] = slotStart.split(':').map(Number);
-    const [slotEndHour, slotEndMin] = slotEnd.split(':').map(Number);
+    const driveStartDate = new Date(driveStartTime);
+    const driveEndDate = new Date(driveEndTime);
+    const slotStartDate = new Date(slotStart);
+    const slotEndDate = new Date(slotEnd);
     
-    const driveStartTotal = driveStartHour * 60 + driveStartMin;
-    const driveEndTotal = driveEndHour * 60 + driveEndMin;
-    const slotStartTotal = slotStartHour * 60 + slotStartMin;
-    const slotEndTotal = slotEndHour * 60 + slotEndMin;
-    
-    const totalMinutes = driveEndTotal - driveStartTotal;
-    const slotDuration = slotEndTotal - slotStartTotal;
-    
+    const totalMinutes = (driveEndDate.getTime() - driveStartDate.getTime()) / (1000 * 60);
+    const slotDuration = (slotEndDate.getTime() - slotStartDate.getTime()) / (1000 * 60);
+
     return (slotDuration / totalMinutes) * 100;
   };
 
-  const getTimePosition = (time: string, startTime: string, endTime: string): number => {
+  const getTimePosition = (time: string, driveStartTime: string, driveEndTime: string): number => {
     const eventDate = new Date(time);
-    const eventHour = eventDate.getHours();
-    const eventMin = eventDate.getMinutes();
-    const eventTotalMin = eventHour * 60 + eventMin;
+    const startDate = new Date(driveStartTime);
+    const endDate = new Date(driveEndTime);
 
-    const [startHour, startMin] = startTime.split(':').map(Number);
-    const [endHour, endMin] = endTime.split(':').map(Number);
-    const startTotalMin = startHour * 60 + startMin;
-    const endTotalMin = endHour * 60 + endMin;
+    const totalMinutes = (endDate.getTime() - startDate.getTime()) / (1000 * 60);
+    const offsetMinutes = (eventDate.getTime() - startDate.getTime()) / (1000 * 60);
 
-    const position = ((eventTotalMin - startTotalMin) / (endTotalMin - startTotalMin)) * 100;
+    const position = (offsetMinutes / totalMinutes) * 100;
     return Math.max(0, Math.min(100, position));
   };
 
-  const generateTimeIntervals = (startTime: string, endTime: string): string[] => {
-    const intervals: string[] = [];
-    const [startHour, startMin] = startTime.split(':').map(Number);
-    const [endHour, endMin] = endTime.split(':').map(Number);
+  const getCurrentTimePosition = (driveStartTime: string, driveEndTime: string): number | null => {
+    const now = new Date();
+    const startDate = new Date(driveStartTime);
+    const endDate = new Date(driveEndTime);
+
+    // Check if current time is within the drive window
+    if (now < startDate || now > endDate) {
+      return null;
+    }
+
+    const totalMinutes = (endDate.getTime() - startDate.getTime()) / (1000 * 60);
+    const offsetMinutes = (now.getTime() - startDate.getTime()) / (1000 * 60);
+
+    return (offsetMinutes / totalMinutes) * 100;
+  };
+
+  const generateTimeIntervals = (driveStartTime: string, driveEndTime: string): Array<{ time: string; date: string; showDate: boolean }> => {
+    const intervals: Array<{ time: string; date: string; showDate: boolean }> = [];
+    const startDate = new Date(driveStartTime);
+    const endDate = new Date(driveEndTime);
     
-    let currentHour = startHour;
-    let currentMin = startMin;
+    let currentTime = new Date(startDate);
+    let previousDate = startDate.toDateString();
     
-    while (currentHour < endHour || (currentHour === endHour && currentMin <= endMin)) {
-      const timeStr = `${currentHour.toString().padStart(2, '0')}:${currentMin.toString().padStart(2, '0')}`;
-      intervals.push(timeStr);
+    while (currentTime <= endDate) {
+      const hours = currentTime.getHours().toString().padStart(2, '0');
+      const minutes = currentTime.getMinutes().toString().padStart(2, '0');
+      const currentDateStr = currentTime.toDateString();
+      const showDate = currentDateStr !== previousDate;
       
-      currentMin += 30;
-      if (currentMin >= 60) {
-        currentMin = 0;
-        currentHour++;
-      }
+      const dateLabel = currentTime.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      
+      intervals.push({
+        time: `${hours}:${minutes}`,
+        date: dateLabel,
+        showDate
+      });
+      
+      previousDate = currentDateStr;
+      
+      // Increment by 30 minutes
+      currentTime = new Date(currentTime.getTime() + 30 * 60 * 1000);
     }
     
     return intervals;
@@ -188,7 +212,17 @@ const Dashboard: React.FC = () => {
         <div>
           <h1>{drive.driveName}</h1>
           <p className="drive-details">
-            {drive.date} | {drive.driveStartTime} - {drive.driveEndTime}
+            {(() => {
+              const startDate = new Date(drive.driveStartTime);
+              const endDate = new Date(drive.driveEndTime);
+              const sameDay = startDate.toDateString() === endDate.toDateString();
+              
+              if (sameDay) {
+                return `${startDate.toLocaleDateString()} | ${startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+              } else {
+                return `${startDate.toLocaleDateString()} ${startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${endDate.toLocaleDateString()} ${endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+              }
+            })()}
           </p>
         </div>
         <div className="header-actions">
@@ -273,16 +307,24 @@ const Dashboard: React.FC = () => {
             <div className="timeline-label">Interviewer</div>
             <div className="timeline-track">
               <div className="time-grid">
-                {generateTimeIntervals(drive.driveStartTime, drive.driveEndTime).map((time, idx) => {
-                  const [hour, min] = time.split(':').map(Number);
-                  const [startHour, startMin] = drive.driveStartTime.split(':').map(Number);
-                  const [endHour, endMin] = drive.driveEndTime.split(':').map(Number);
+                {generateTimeIntervals(drive.driveStartTime, drive.driveEndTime).map((interval, idx) => {
+                  // Parse the time string (HH:MM) to get position
+                  const [hour, min] = interval.time.split(':').map(Number);
+                  const timeDate = new Date(drive.driveStartTime);
+                  timeDate.setHours(hour, min, 0, 0);
                   
-                  const timeTotal = hour * 60 + min;
-                  const startTotal = startHour * 60 + startMin;
-                  const endTotal = endHour * 60 + endMin;
+                  // Handle cross-midnight: if hour is less than start hour, add a day
+                  const startHour = new Date(drive.driveStartTime).getHours();
+                  if (hour < startHour) {
+                    timeDate.setDate(timeDate.getDate() + 1);
+                  }
                   
-                  const position = ((timeTotal - startTotal) / (endTotal - startTotal)) * 100;
+                  const startDate = new Date(drive.driveStartTime);
+                  const endDate = new Date(drive.driveEndTime);
+                  
+                  const totalMinutes = (endDate.getTime() - startDate.getTime()) / (1000 * 60);
+                  const offsetMinutes = (timeDate.getTime() - startDate.getTime()) / (1000 * 60);
+                  const position = (offsetMinutes / totalMinutes) * 100;
                   
                   return (
                     <div key={idx} className="time-grid-line" style={{ left: `${position}%` }}></div>
@@ -290,22 +332,43 @@ const Dashboard: React.FC = () => {
                 })}
               </div>
               <div className="time-labels">
-                {generateTimeIntervals(drive.driveStartTime, drive.driveEndTime).map((time, idx) => {
-                  const [hour, min] = time.split(':').map(Number);
-                  const [startHour, startMin] = drive.driveStartTime.split(':').map(Number);
-                  const [endHour, endMin] = drive.driveEndTime.split(':').map(Number);
+                {generateTimeIntervals(drive.driveStartTime, drive.driveEndTime).map((interval, idx) => {
+                  // Parse the time string (HH:MM) to get position
+                  const [hour, min] = interval.time.split(':').map(Number);
+                  const timeDate = new Date(drive.driveStartTime);
+                  timeDate.setHours(hour, min, 0, 0);
                   
-                  const timeTotal = hour * 60 + min;
-                  const startTotal = startHour * 60 + startMin;
-                  const endTotal = endHour * 60 + endMin;
+                  // Handle cross-midnight: if hour is less than start hour, add a day
+                  const startHour = new Date(drive.driveStartTime).getHours();
+                  if (hour < startHour) {
+                    timeDate.setDate(timeDate.getDate() + 1);
+                  }
                   
-                  const position = ((timeTotal - startTotal) / (endTotal - startTotal)) * 100;
+                  const startDate = new Date(drive.driveStartTime);
+                  const endDate = new Date(drive.driveEndTime);
+                  
+                  const totalMinutes = (endDate.getTime() - startDate.getTime()) / (1000 * 60);
+                  const offsetMinutes = (timeDate.getTime() - startDate.getTime()) / (1000 * 60);
+                  const position = (offsetMinutes / totalMinutes) * 100;
                   
                   return (
-                    <span key={idx} style={{ left: `${position}%` }}>{time}</span>
+                    <span key={idx} style={{ left: `${position}%` }}>
+                      <div>{interval.time}</div>
+                      {interval.showDate && <div className="date-label">({interval.date})</div>}
+                    </span>
                   );
                 })}
               </div>
+              {(() => {
+                const currentPosition = getCurrentTimePosition(drive.driveStartTime, drive.driveEndTime);
+                return currentPosition !== null && (
+                  <div 
+                    className="current-time-line" 
+                    style={{ left: `${currentPosition}%` }}
+                    title={`Current time: ${currentTime.toLocaleTimeString()}`}
+                  />
+                );
+              })()}
             </div>
           </div>
 
@@ -326,16 +389,24 @@ const Dashboard: React.FC = () => {
                 </div>
                 <div className="timeline-track">
                   <div className="time-grid">
-                    {generateTimeIntervals(drive.driveStartTime, drive.driveEndTime).map((time, idx) => {
-                      const [hour, min] = time.split(':').map(Number);
-                      const [startHour, startMin] = drive.driveStartTime.split(':').map(Number);
-                      const [endHour, endMin] = drive.driveEndTime.split(':').map(Number);
+                    {generateTimeIntervals(drive.driveStartTime, drive.driveEndTime).map((interval, idx) => {
+                      // Parse the time string (HH:MM) to get position
+                      const [hour, min] = interval.time.split(':').map(Number);
+                      const timeDate = new Date(drive.driveStartTime);
+                      timeDate.setHours(hour, min, 0, 0);
                       
-                      const timeTotal = hour * 60 + min;
-                      const startTotal = startHour * 60 + startMin;
-                      const endTotal = endHour * 60 + endMin;
+                      // Handle cross-midnight: if hour is less than start hour, add a day
+                      const startHour = new Date(drive.driveStartTime).getHours();
+                      if (hour < startHour) {
+                        timeDate.setDate(timeDate.getDate() + 1);
+                      }
                       
-                      const position = ((timeTotal - startTotal) / (endTotal - startTotal)) * 100;
+                      const startDate = new Date(drive.driveStartTime);
+                      const endDate = new Date(drive.driveEndTime);
+                      
+                      const totalMinutes = (endDate.getTime() - startDate.getTime()) / (1000 * 60);
+                      const offsetMinutes = (timeDate.getTime() - startDate.getTime()) / (1000 * 60);
+                      const position = (offsetMinutes / totalMinutes) * 100;
                       
                       return (
                         <div key={idx} className="time-grid-line" style={{ left: `${position}%` }}></div>
@@ -381,21 +452,26 @@ const Dashboard: React.FC = () => {
                             <span className={`event-badge round-badge`}>
                               {event.round.roundName}
                             </span>
-                            <span className={`event-badge status-${event.status.toLowerCase()}`}>
-                              {event.status.substring(0, 4)}
+                            <span className={`event-badge decision-${event.decision.toLowerCase()}`}>
+                              {event.decision === 'STRONG_YES' ? 'S-YES' : 
+                               event.decision === 'STRONG_NO' ? 'S-NO' : 
+                               event.decision === 'PENDING' ? 'PEND' :
+                               event.decision}
                             </span>
-                            {event.decision !== 'PENDING' && (
-                              <span className={`event-badge decision-${event.decision.toLowerCase()}`}>
-                                {event.decision === 'STRONG_YES' ? 'S-YES' : 
-                                 event.decision === 'STRONG_NO' ? 'S-NO' : 
-                                 event.decision}
-                              </span>
-                            )}
                           </div>
                         </div>
                       </div>
                     );
                   })}
+                  {(() => {
+                    const currentPosition = getCurrentTimePosition(drive.driveStartTime, drive.driveEndTime);
+                    return currentPosition !== null && (
+                      <div 
+                        className="current-time-line" 
+                        style={{ left: `${currentPosition}%` }}
+                      />
+                    );
+                  })()}
                 </div>
               </div>
             );

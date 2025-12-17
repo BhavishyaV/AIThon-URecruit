@@ -1,9 +1,10 @@
 import axios from 'axios';
-import {
-  HiringDriveT,
-  CreateHiringDriveRequest,
-  UpdateEventRequest,
-  DashboardStats
+import { 
+  HiringDriveT, 
+  CreateHiringDriveRequest, 
+  UpdateEventRequest, 
+  DashboardStats,
+  NotificationResponseRequest
 } from '../types';
 
 const API_BASE_URL = '/api';
@@ -49,6 +50,12 @@ export const hiringDriveApi = {
   // Get dashboard statistics
   getDashboardStats: async (driveId: string): Promise<DashboardStats> => {
     const response = await api.get<DashboardStats>(`/hiring-drives/${driveId}/stats`);
+    return response.data;
+  },
+
+  // Send notification response
+  sendNotificationResponse: async (data: NotificationResponseRequest): Promise<{ success: boolean; message: string; eventId: string }> => {
+    const response = await api.post(`/notification-response`, data);
     return response.data;
   }
 };

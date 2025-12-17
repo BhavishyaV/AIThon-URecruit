@@ -11,6 +11,7 @@ import {
   ParticipantStatus,
   RoundName
 } from '../../../shared/types';
+import { NotificationService } from './notificationService';
 
 // Level hierarchy (higher number = higher level)
 const LEVEL_HIERARCHY: Record<string, number> = {
@@ -29,7 +30,7 @@ export class SchedulingService {
   static scheduleInterviews(drive: HiringDriveT): EventT[] {
     const newEvents: EventT[] = [];
     const currentTime = new Date();
-    const bufferTime = 15 * 60 * 1000; // 15 minutes in milliseconds
+    const bufferTime = 10 * 60 * 1000; // 10 minute in milliseconds
 
     for (const candidate of drive.candidates) {
       // Skip candidates who have been eliminated or who have completed all rounds
@@ -69,6 +70,38 @@ export class SchedulingService {
           // Only schedule one round at a time per candidate
           break;
         }
+      }
+    }
+
+    // Send notifications for scheduled events
+    for (const event of newEvents) {
+      const interviewer = drive.interviewers.find(
+        i => i.email === event.interviewerEmail
+      );
+      const candidate = drive.candidates.find(
+        c => c.email === event.candidateEmail
+      );
+    
+      if (interviewer && candidate && drive._id) {
+        NotificationService.sendInterviewerScheduledNotification(event, interviewer, drive._id);
+        NotificationService.sendCandidateScheduledNotification(event, candidate, drive._id);
+    
+        // Schedule sending interview start notification at event.startTime
+        const startTime = new Date(event.startTime).getTime();
+        const now = Date.now();
+        const startDelay = Math.max(0, startTime - now);
+        
+        setTimeout(() => {
+          NotificationService.sendInterviewStartNotification(event, interviewer, drive._id!);
+        }, startDelay);
+    
+        // Schedule sending interview complete notification at event.startTime + event.duration
+        const completionTime = startTime + (event.duration * 60 * 1000); // duration is in minutes
+        const completionDelay = Math.max(0, completionTime - now);
+        
+        setTimeout(() => {
+          NotificationService.sendInterviewCompleteNotification(event, interviewer, drive._id!);
+        }, completionDelay);
       }
     }
 
@@ -176,6 +209,7 @@ export class SchedulingService {
       // Find the interviewer's earliest available slot after current time + buffer time
       const earliestAvailableSlot = this.findEarliestAvailableSlot(
         interviewer,
+        candidate,
         drive,
         round.duration,
         currentTime,
@@ -228,17 +262,14 @@ export class SchedulingService {
     startTime: Date,
   ): EventT {    
     // Ensure start time is within drive hours
-    const driveDate = new Date(drive.date);
-    const [driveStartHour, driveStartMinute] = drive.driveStartTime.split(':').map(Number);
-    const driveStart = new Date(driveDate);
-    driveStart.setHours(driveStartHour, driveStartMinute, 0, 0);
+    const driveStart = new Date(drive.driveStartTime);
 
     if (startTime < driveStart) {
       startTime.setTime(driveStart.getTime());
     }
 
     // Ensure start time is within interviewer slot
-    const interviewerSlotStart = this.parseTimeString(drive.date, interviewer.slotStart);
+    const interviewerSlotStart = new Date(interviewer.slotStart);
     if (startTime < interviewerSlotStart) {
       startTime.setTime(interviewerSlotStart.getTime());
     }
@@ -258,16 +289,6 @@ export class SchedulingService {
       hackerRankLink: this.generateHackerRankLink(),
       scorecardLink: this.generateScorecardLink(candidate.email, interviewer.email, round.roundName)
     };
-  }
-
-  /**
-   * Parse time string (HH:MM) and combine with date
-   */
-  private static parseTimeString(date: string, time: string): Date {
-    const [hour, minute] = time.split(':').map(Number);
-    const result = new Date(date);
-    result.setHours(hour, minute, 0, 0);
-    return result;
   }
 
   /**
@@ -296,10 +317,11 @@ export class SchedulingService {
   }
 
   /**
-   * Find the earliest available slot for an interviewer
+   * Find the earliest available slot for both interviewer and candidate
    */
   private static findEarliestAvailableSlot(
     interviewer: InterviewerT,
+    candidate: CandidateT,
     drive: HiringDriveT,
     duration: number,
     currentTime: Date,
@@ -309,8 +331,8 @@ export class SchedulingService {
     const earliestStart = new Date(currentTime.getTime() + bufferTime);
     
     // Get interviewer's slot start and end times
-    const slotStart = this.parseTimeString(drive.date, interviewer.slotStart);
-    const slotEnd = this.parseTimeString(drive.date, interviewer.slotEnd);
+    const slotStart = new Date(interviewer.slotStart);
+    const slotEnd = new Date(interviewer.slotEnd);
     
     // If earliest start is after slot end, no available slot
     if (earliestStart >= slotEnd) {
@@ -325,8 +347,17 @@ export class SchedulingService {
       .filter(event => event.interviewerEmail === interviewer.email)
       .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
     
+    // Get all events for this candidate, sorted by start time
+    const candidateEvents = drive.events
+      .filter(event => event.candidateEmail === candidate.email)
+      .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+    
+    // Merge and sort all conflicting events (both interviewer and candidate events)
+    const allConflictingEvents = [...interviewerEvents, ...candidateEvents]
+      .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+    
     // If no events, return the candidate start time
-    if (interviewerEvents.length === 0) {
+    if (allConflictingEvents.length === 0) {
       const candidateEnd = new Date(candidateStart.getTime() + duration * 60 * 1000);
       if (candidateEnd <= slotEnd) {
         return candidateStart.toISOString();
@@ -335,7 +366,7 @@ export class SchedulingService {
     }
     
     // Check for gaps between events
-    for (const event of interviewerEvents) {
+    for (const event of allConflictingEvents) {
       const eventStart = new Date(event.startTime);
       const eventEnd = new Date(eventStart.getTime() + event.duration * 60 * 1000);
       

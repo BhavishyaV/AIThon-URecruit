@@ -5,8 +5,8 @@ export interface InterviewerCSVRow {
   'Interviewer Email': string;
   'Interviewer Name': string;
   'Rounds Eligible': string; // Comma-separated round names
-  'Available Slot Start': string; // HH:MM
-  'Available Slot End': string; // HH:MM
+  'Available Slot Start': string; // DateTime string (e.g., "2024-12-17 09:00")
+  'Available Slot End': string; // DateTime string (e.g., "2024-12-17 18:00")
   'Level': string;
   'Job Family': string;
   'Max Interviews': string;
@@ -47,6 +47,10 @@ export const parseInterviewersCSV = (file: File): Promise<InterviewerT[]> => {
                 }
               });
 
+              // Parse datetime strings to ISO timestamps
+              const slotStartStr = row['Available Slot Start'].trim();
+              const slotEndStr = row['Available Slot End'].trim();
+              
               return {
                 email: row['Interviewer Email'].trim(),
                 fullName: row['Interviewer Name'].trim(),
@@ -54,8 +58,8 @@ export const parseInterviewersCSV = (file: File): Promise<InterviewerT[]> => {
                 jobFamily: row['Job Family'].trim(),
                 eligibility,
                 maxInterviews: parseInt(row['Max Interviews'], 10),
-                slotStart: row['Available Slot Start'].trim(),
-                slotEnd: row['Available Slot End'].trim(),
+                slotStart: new Date(slotStartStr).toISOString(),
+                slotEnd: new Date(slotEndStr).toISOString(),
                 currentStatus: ParticipantStatus.WAITING
               };
             });

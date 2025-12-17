@@ -5,6 +5,8 @@ import { parseInterviewersCSV, parseCandidatesCSV } from '../utils/csvParser';
 import { InterviewerT, CandidateT, RoundT, RoundName } from '../types';
 import './CreateHiringDrive.css';
 
+const DEFAULT_ROUND_DURATION = 30;
+
 const CreateHiringDrive: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -12,7 +14,6 @@ const CreateHiringDrive: React.FC = () => {
 
   // Form state
   const [driveName, setDriveName] = useState('');
-  const [date, setDate] = useState('');
   const [driveStartTime, setDriveStartTime] = useState('');
   const [driveEndTime, setDriveEndTime] = useState('');
   const [rounds, setRounds] = useState<RoundT[]>([
@@ -20,7 +21,7 @@ const CreateHiringDrive: React.FC = () => {
       roundName: RoundName.BPS,
       isElimination: true,
       isJobFamilyMatchingRequired: false,
-      duration: 60
+      duration: DEFAULT_ROUND_DURATION
     }
   ]);
   const [interviewers, setInterviewers] = useState<InterviewerT[]>([]);
@@ -33,7 +34,7 @@ const CreateHiringDrive: React.FC = () => {
         roundName: RoundName.CODING1,
         isElimination: false,
         isJobFamilyMatchingRequired: false,
-        duration: 60
+        duration: DEFAULT_ROUND_DURATION
       }
     ]);
   };
@@ -81,8 +82,14 @@ const CreateHiringDrive: React.FC = () => {
     setError('');
 
     // Validation
-    if (!driveName || !date || !driveStartTime || !driveEndTime) {
+    if (!driveName || !driveStartTime || !driveEndTime) {
       setError('Please fill in all required fields');
+      return;
+    }
+
+    // Validate end time is after start time
+    if (new Date(driveEndTime) <= new Date(driveStartTime)) {
+      setError('End time must be after start time');
       return;
     }
 
@@ -104,11 +111,14 @@ const CreateHiringDrive: React.FC = () => {
     setLoading(true);
 
     try {
+      // Convert datetime-local values to ISO timestamps
+      const startTimestamp = new Date(driveStartTime).toISOString();
+      const endTimestamp = new Date(driveEndTime).toISOString();
+
       const hiringDrive = await hiringDriveApi.createHiringDrive({
         driveName,
-        date,
-        driveStartTime,
-        driveEndTime,
+        driveStartTime: startTimestamp,
+        driveEndTime: endTimestamp,
         rounds,
         interviewers,
         candidates
@@ -146,38 +156,33 @@ const CreateHiringDrive: React.FC = () => {
               />
             </div>
 
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="date">Date *</label>
+            <div className="datetime-row">
+              <div className="form-group datetime-group">
+                <label htmlFor="startTime">Start Date & Time *</label>
                 <input
-                  type="date"
-                  id="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="startTime">Start Time *</label>
-                <input
-                  type="time"
+                  type="datetime-local"
                   id="startTime"
                   value={driveStartTime}
                   onChange={(e) => setDriveStartTime(e.target.value)}
                   required
                 />
+                <div className="datetime-hint">
+                  When does the hiring drive begin?
+                </div>
               </div>
 
-              <div className="form-group">
-                <label htmlFor="endTime">End Time *</label>
+              <div className="form-group datetime-group">
+                <label htmlFor="endTime">End Date & Time *</label>
                 <input
-                  type="time"
+                  type="datetime-local"
                   id="endTime"
                   value={driveEndTime}
                   onChange={(e) => setDriveEndTime(e.target.value)}
                   required
                 />
+                <div className="datetime-hint">
+                  When does the hiring drive end?
+                </div>
               </div>
             </div>
           </div>
@@ -288,8 +293,8 @@ const CreateHiringDrive: React.FC = () => {
                     <li>Interviewer Email</li>
                     <li>Interviewer Name</li>
                     <li>Rounds Eligible (comma-separated)</li>
-                    <li>Available Slot Start (HH:MM)</li>
-                    <li>Available Slot End (HH:MM)</li>
+                    <li>Available Slot Start (YYYY-MM-DD HH:MM)</li>
+                    <li>Available Slot End (YYYY-MM-DD HH:MM)</li>
                     <li>Level</li>
                     <li>Job Family</li>
                     <li>Max Interviews</li>

@@ -14,11 +14,11 @@ export class StatusUpdateService {
   static updateInterviewerStatus(
     interviewer: InterviewerT,
     drive: HiringDriveT,
-    currentTime: Date
   ): ParticipantStatus {
     // Parse interviewer slot times
-    const slotStart = this.parseTimeString(drive.date, interviewer.slotStart);
-    const slotEnd = this.parseTimeString(drive.date, interviewer.slotEnd);
+    const slotStart = new Date(interviewer.slotStart);
+    const slotEnd = new Date(interviewer.slotEnd);
+    const currentTime = new Date();
 
     // If current time < interviewer's slot start time -> BUSY
     if (currentTime < slotStart) {
@@ -51,8 +51,17 @@ export class StatusUpdateService {
       return ParticipantStatus.DONE;
     }
 
-    // Default to current status or WAITING
-    return interviewer.currentStatus;
+    const hasOngoingInterview = drive.events.some(
+      event =>
+        event.interviewerEmail === interviewer.email &&
+        event.status === EventStatus.ONGOING
+    );
+
+    if (hasOngoingInterview) {
+      return ParticipantStatus.BUSY;
+    } else {
+      return ParticipantStatus.WAITING;
+    }
   }
 
   /**
@@ -60,8 +69,7 @@ export class StatusUpdateService {
    */
   static updateCandidateStatus(
     candidate: CandidateT,
-    drive: HiringDriveT,
-    currentTime: Date
+    drive: HiringDriveT
   ): ParticipantStatus {
     // If candidate's overallDecision is not PENDING -> DONE
     if (candidate.overallDecision !== Decision.PENDING) {
@@ -77,21 +85,9 @@ export class StatusUpdateService {
 
     if (hasOngoingInterview) {
       return ParticipantStatus.BUSY;
-    }
-
-    // Check if candidate has a scheduled interview
-    const hasScheduledInterview = drive.events.some(
-      event =>
-        event.candidateEmail === candidate.email &&
-        event.status === EventStatus.SCHEDULED
-    );
-
-    if (hasScheduledInterview) {
+    }else{
       return ParticipantStatus.WAITING;
     }
-
-    // Default to WAITING if still in progress
-    return ParticipantStatus.WAITING;
   }
 
   /**
@@ -108,13 +104,9 @@ export class StatusUpdateService {
     );
 
     // Check if candidate failed any elimination round
-    const failedElimination = candidateEvents.some(event => {
-      const round = drive.rounds.find(r => r.roundName === event.round.roundName);
-      return (
-        round?.isElimination &&
-        (event.decision === Decision.NO || event.decision === Decision.STRONG_NO)
-      );
-    });
+    const failedElimination = candidateEvents.some(
+      event => event.round?.isElimination && (event.decision === Decision.NO || event.decision === Decision.STRONG_NO)
+    );
 
     if (failedElimination) {
       return Decision.NO;
@@ -145,14 +137,5 @@ export class StatusUpdateService {
     }
   }
 
-  /**
-   * Parse time string and combine with date
-   */
-  private static parseTimeString(date: string, time: string): Date {
-    const [hour, minute] = time.split(':').map(Number);
-    const result = new Date(date);
-    result.setHours(hour, minute, 0, 0);
-    return result;
-  }
 }
 

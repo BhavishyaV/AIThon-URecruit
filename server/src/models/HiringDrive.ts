@@ -31,8 +31,8 @@ const InterviewerSchema = new Schema({
     required: true
   },
   maxInterviews: { type: Number, required: true },
-  slotStart: { type: String, required: true },
-  slotEnd: { type: String, required: true },
+  slotStart: { type: String, required: true }, // ISO timestamp
+  slotEnd: { type: String, required: true }, // ISO timestamp
   currentStatus: {
     type: String,
     enum: Object.values(ParticipantStatus),
@@ -63,8 +63,8 @@ const EventSchema = new Schema({
   round: { type: RoundSchema, required: true },
   candidateEmail: { type: String, required: true },
   interviewerEmail: { type: String, required: true },
-  startTime: { type: String, required: true },
-  duration: { type: Number, required: true },
+  startTime: { type: String, required: true }, // ISO timestamp
+  duration: { type: Number, required: true }, // Duration in minutes
   status: {
     type: String,
     enum: Object.values(EventStatus),
@@ -83,9 +83,8 @@ const EventSchema = new Schema({
 
 const HiringDriveSchema = new Schema({
   driveName: { type: String, required: true },
-  date: { type: String, required: true },
-  driveStartTime: { type: String, required: true },
-  driveEndTime: { type: String, required: true },
+  driveStartTime: { type: String, required: true }, // ISO timestamp
+  driveEndTime: { type: String, required: true }, // ISO timestamp
   rounds: [RoundSchema],
   candidates: [CandidateSchema],
   interviewers: [InterviewerSchema],

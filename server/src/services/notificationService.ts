@@ -1,4 +1,6 @@
-import { EventT, InterviewerT, CandidateT } from '../../../shared/types';
+import { EventT, InterviewerT, CandidateT, NotificationResponseRequest, ScheduledNotifData, Decision } from '../../../shared/types';
+
+const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:5001/api';
 
 export class NotificationService {
   /**
@@ -6,7 +8,8 @@ export class NotificationService {
    */
   static sendInterviewerScheduledNotification(
     event: EventT,
-    interviewer: InterviewerT
+    interviewer: InterviewerT,
+    driveId: string
   ): void {
     console.log('Sending notification to interviewer:', {
       to: interviewer.email,
@@ -22,6 +25,25 @@ export class NotificationService {
       }
     });
     // TODO: Implement actual notification sending (email, Slack, etc.)
+    // Mock interviewer accepting the scheduled interview
+    setTimeout(() => {
+      const response: NotificationResponseRequest = {
+        source: 'interviewer',
+        email: interviewer.email,
+        driveId: driveId,
+        eventId: event.id,
+        notificationType: 'scheduled_notif',
+        data: {
+          isAccepted: true
+        } as ScheduledNotifData
+      };
+      
+      fetch(`${API_BASE_URL}/notification-response`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(response)
+      }).catch(err => console.error('Error sending mock interviewer scheduled response:', err));
+    }, 1000); // Mock 1 second delay for response
   }
 
   /**
@@ -29,7 +51,8 @@ export class NotificationService {
    */
   static sendCandidateScheduledNotification(
     event: EventT,
-    candidate: CandidateT
+    candidate: CandidateT,
+    driveId: string
   ): void {
     console.log('Sending notification to candidate:', {
       to: candidate.email,
@@ -44,6 +67,25 @@ export class NotificationService {
       }
     });
     // TODO: Implement actual notification sending (email, Slack, etc.)
+    // Mock candidate accepting the scheduled interview
+    setTimeout(() => {
+      const response: NotificationResponseRequest = {
+        source: 'candidate',
+        email: candidate.email,
+        driveId: driveId,
+        eventId: event.id,
+        notificationType: 'scheduled_notif',
+        data: {
+          isAccepted: true
+        } as ScheduledNotifData
+      };
+      
+      fetch(`${API_BASE_URL}/notification-response`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(response)
+      }).catch(err => console.error('Error sending mock candidate scheduled response:', err));
+    }, 1500); // Mock 1.5 second delay for response
   }
 
   /**
@@ -51,17 +93,38 @@ export class NotificationService {
    */
   static sendInterviewStartNotification(
     event: EventT,
-    interviewer: InterviewerT
+    interviewer: InterviewerT,
+    driveId: string
   ): void {
     console.log('Sending start notification to interviewer:', {
       to: interviewer.email,
-      subject: `Interview Starting - ${event.round.roundName}`,
+      subject: `Interview Starting for ${event.candidateEmail} - ${event.round.roundName}`,
       body: {
         message: 'Has the interview started?',
-        eventId: event.id
+        eventId: event.id,
+        candidateEmail: event.candidateEmail
       }
     });
-    // TODO: Implement actual notification sending
+    // TODO: Implement actual notification sending (email, Slack, etc.)
+    // Mock interviewer confirming interview has started
+    setTimeout(() => {
+      const response: NotificationResponseRequest = {
+        source: 'interviewer',
+        email: interviewer.email,
+        driveId: driveId,
+        eventId: event.id,
+        notificationType: 'start_notif',
+        data: {
+          isStarted: true
+        }
+      };
+      
+      fetch(`${API_BASE_URL}/notification-response`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(response)
+      }).catch(err => console.error('Error sending mock interview start response:', err));
+    }, 2000); // Mock 2 second delay for response
   }
 
   /**
@@ -69,14 +132,16 @@ export class NotificationService {
    */
   static sendInterviewCompleteNotification(
     event: EventT,
-    interviewer: InterviewerT
+    interviewer: InterviewerT,
+    driveId: string
   ): void {
     console.log('Sending completion notification to interviewer:', {
       to: interviewer.email,
-      subject: `Interview Ending - ${event.round.roundName}`,
+      subject: `Interview Ending for ${event.candidateEmail} - ${event.round.roundName}`,
       body: {
         message: 'Please provide interview feedback',
         eventId: event.id,
+        candidateEmail: event.candidateEmail,
         requiredFields: [
           'Decision (YES/NO/STRONG_YES/STRONG_NO)',
           'Question Asked',
@@ -85,7 +150,35 @@ export class NotificationService {
         ]
       }
     });
-    // TODO: Implement actual notification sending
+    // TODO: Implement actual notification sending (email, Slack, etc.)
+    // Mock interviewer providing feedback after interview completion
+    setTimeout(() => {
+      // Randomly simulate different decisions and scenarios for testing
+      const decisions = [Decision.YES, Decision.NO, Decision.STRONG_YES, Decision.STRONG_NO];
+      const randomDecision = decisions[Math.floor(Math.random() * decisions.length)];
+      const isReadyForNext = Math.random() > 0.3; // 70% ready for next round
+      const breakTime = isReadyForNext ? 0 : [15, 30][Math.floor(Math.random() * 2)];
+      
+      const response: NotificationResponseRequest = {
+        source: 'interviewer',
+        email: interviewer.email,
+        driveId: driveId,
+        eventId: event.id,
+        notificationType: 'completed_notif',
+        data: {
+          decision: randomDecision,
+          questionAsked: `Sample question for ${event.round.roundName}`,
+          isReadyForNextRound: isReadyForNext,
+          breakTime: breakTime
+        }
+      };
+      
+      fetch(`${API_BASE_URL}/notification-response`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(response)
+      }).catch(err => console.error('Error sending mock interview completion response:', err));
+    }, 3000); // Mock 3 second delay for response
   }
 }
 

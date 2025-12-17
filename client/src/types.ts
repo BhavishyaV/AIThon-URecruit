@@ -33,8 +33,8 @@ export type InterviewerT = {
   jobFamily: string;
   eligibility: Record<RoundName, boolean>;
   maxInterviews: number;
-  slotStart: string;
-  slotEnd: string;
+  slotStart: string; // ISO timestamp
+  slotEnd: string; // ISO timestamp
   currentStatus: ParticipantStatus;
 }
 
@@ -60,8 +60,8 @@ export type EventT = {
   round: RoundT;
   candidateEmail: string;
   interviewerEmail: string;
-  startTime: string;
-  duration: number;
+  startTime: string; // ISO timestamp
+  duration: number; // Duration in minutes
   status: EventStatus;
   decision: Decision;
   zoomLink: string;
@@ -71,11 +71,10 @@ export type EventT = {
 }
 
 export type HiringDriveT = {
-  _id?: string;
+  _id: string;
   driveName: string;
-  date: string;
-  driveStartTime: string;
-  driveEndTime: string;
+  driveStartTime: string; // ISO timestamp
+  driveEndTime: string; // ISO timestamp
   rounds: Array<RoundT>;
   candidates: Array<CandidateT>;
   interviewers: Array<InterviewerT>;
@@ -101,5 +100,32 @@ export type DashboardStats = {
   candidatesWithDecisionPending: number;
   percentCompletedCandidates: number;
   percentSelectedCandidates: number;
+}
+
+// Notification response types
+export type NotificationType = 'scheduled_notif' | 'start_notif' | 'completed_notif';
+
+export type ScheduledNotifData = {
+  isAccepted: boolean;
+}
+
+export type StartNotifData = {
+  isStarted: boolean;
+}
+
+export type CompletedNotifData = {
+  decision: Decision;
+  questionAsked: string;
+  isReadyForNextRound: boolean;
+  breakTime: number; // in minutes: 15, 30, 45, 60
+}
+
+export type NotificationResponseRequest = {
+  source: 'interviewer' | 'candidate';
+  email: string;
+  driveId: string;
+  eventId: string;
+  notificationType: NotificationType;
+  data: ScheduledNotifData | StartNotifData | CompletedNotifData;
 }
 
