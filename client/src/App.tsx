@@ -4,11 +4,11 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 
 function App() {
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState<string>('');
 
   useEffect(() => {
     // Fetching the message from the backend
-    axios.get('/api/test')
+    axios.get<{ message: string }>('/api/test')
       .then(response => {
         setMessage(response.data.message);
       })
@@ -21,7 +21,7 @@ function App() {
       <header className="App-header">
         <img src={logo} className="App-logo" alt="logo" />
         <p>
-          Edit <code>src/App.js</code> and save to reload.
+          Edit <code>src/App.tsx</code> and save to reload.
         </p>
         <a
           className="App-link"
@@ -37,3 +37,4 @@ function App() {
 }
 
 export default App;
+
